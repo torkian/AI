@@ -1,0 +1,77 @@
+Content Localization on AWS
+
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+Licensed under the Apache License Version 2.0 (the "License"). You may not use this file except
+in compliance with the License. A copy of the License is located at http://www.apache.org/licenses/
+or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+
+attrs under the Massachusetts Institute of Technology license
+aws-amplify under the Apache License Version 2.0
+aws-amplify-vue under the Apache License Version 2.0
+aws_xray_sdk under the Apache License Version 2.0
+axios under the Massachusetts Institute of Technology license
+bad-words under the Massachusetts Institute of Technology license
+bootstrap under the Massachusetts Institute of Technology license
+bootstrap-vue under the Massachusetts Institute of Technology license
+boto3 under the Apache License Version 2.0
+botocore under the Apache License Version 2.0
+cfn-lint under the Massachusetts Institute of Technology license
+cfnresponse under the Apache License Version 2.0
+chalice under the Apache License Version 2.0
+chart.js under the Massachusetts Institute of Technology license
+colorama under the BSD license
+configparser under the Massachusetts Institute of Technology license
+coverage under the Apache License Version 2.0
+crayons under the Massachusetts Institute of Technology license
+diff under the BSD with attribution (BSD-3) license
+dropzone under the Massachusetts Institute of Technology license
+elasticsearch-py under the Apache License Version 2.0
+exceptiongroup under the Massachusetts Institute of Technology license
+h11 under the Massachusetts Institute of Technology license
+iniconfig under the Massachusetts Institute of Technology license
+jmespath under the Massachusetts Institute of Technology license
+jquery under the Massachusetts Institute of Technology license
+jwt-decode under the Massachusetts Institute of Technology license
+latest-version under the Massachusetts Institute of Technology license
+lodash under the Massachusetts Institute of Technology license
+number-to-words under the Massachusetts Institute of Technology license
+outcome under the Apache License Version 2.0
+pluggy under the Massachusetts Institute of Technology license
+PySocks under the BSD license
+pytest under the Massachusetts Institute of Technology license
+pytest-cov under the Massachusetts Institute of Technology license
+python-dateutil under the Apache License Version 2.0
+register-service-worker under the Massachusetts Institute of Technology license
+requests under the Apache License Version 2.0
+requests-aws4auth under the Massachusetts Institute of Technology license
+routerjs under the Massachusetts Institute of Technology license
+s3transfer under the Apache License Version 2.0
+selenium under the Apache License Version 2.0
+sniffio under the Apache License Version 2.0
+tomli under the Massachusetts Institute of Technology license
+trio under the Apache License Version 2.0
+trio-websocket under the Massachusetts Institute of Technology license
+urllib3 under the Massachusetts Institute of Technology license
+video.js under the Apache License Version 2.0
+videojs-flash under the Apache License Version 2.0
+videojs-hotkeys under the Apache License Version 2.0
+videojs-markers under the Massachusetts Institute of Technology license
+voerro-vue-tagsinput under the Massachusetts Institute of Technology license
+vue under the Massachusetts Institute of Technology license
+vue-highlightjs under the Massachusetts Institute of Technology license
+vue-router under the Massachusetts Institute of Technology license
+vuex under the Massachusetts Institute of Technology license
+vuex-persistedstate under the Massachusetts Institute of Technology license
+@vue/compat under the Massachusetts Institute of Technology license
+@vue/compiler-sfc under the Massachusetts Institute of Technology license
+wavesurfer.js under the BSD with attribution (BSD-3) license
+webdriver-manager under the Apache License Version 2.0
+wsproto under the Massachusetts Institute of Technology license

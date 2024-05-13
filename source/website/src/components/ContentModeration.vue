@@ -1,0 +1,303 @@
+<!-- 
+######################################################################################################################
+#  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.                                                #
+#                                                                                                                    #
+#  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    #
+#  with the License. A copy of the License is located at                                                             #
+#                                                                                                                    #
+#      http://www.apache.org/licenses/LICENSE-2.0                                                                    #
+#                                                                                                                    #
+#  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES #
+#  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    #
+#  and limitations under the License.                                                                                #
+######################################################################################################################
+-->
+
+<template>
+  <b-container fluid>
+    <b-col>
+      <b-row
+        align-h="center"
+        class="my-1"
+      >
+        <div class="wrapper">
+          Confidence Threshold<br>
+          <input
+            type="range"
+            value="90"
+            min="55"
+            max="99"
+            step="1"
+            @click="updateConfidence"
+          >
+          {{ Confidence }}%<br>
+        </div>
+      </b-row>
+      <div v-if="lowerConfidence === true">
+        {{ lowerConfidenceMessage }}
+      </div>
+      <div
+        v-if="isBusy"
+        class="wrapper"
+      >
+        <Loading />
+      </div>
+      <b-row
+        align-h="center"
+        class="my-1"
+      >
+        <div class="wrapper">
+          <br>
+          <template v-for="label in sorted_unique_labels">
+            <!-- Show lighter button outline since content moderation never provides bounding boxes -->
+            <b-button
+              v-b-tooltip.hover
+              variant="outline-secondary"
+              :title="label[1]"
+              size="sm"
+              pill
+              @click="updateMarkers(label[0])"
+            >
+              {{ label[0] }}
+            </b-button> &nbsp;
+          </template>
+        </div>
+      </b-row>
+
+      <b-row
+        align-h="center"
+        class="my-1"
+      >
+        <div
+          v-if="isBusy === false"
+          class="wrapper"
+        >
+          <br><p class="text-muted">
+            ({{ count_labels }} identified objects, {{ count_distinct_labels }} unique)
+          </p>
+        </div>
+      </b-row>
+    </b-col>
+    <b-button
+      type="button"
+      @click="saveFile()"
+    >
+      Download Data
+    </b-button>
+    <br>
+    <b-button
+      :pressed="false"
+      size="sm"
+      variant="link"
+      class="text-decoration-none"
+      @click="showElasticsearchApiRequest = true"
+    >
+      Show API request to get these results
+    </b-button>
+    <b-modal
+      v-model="showElasticsearchApiRequest"
+      scrollable
+      title="SEARCH API"
+      ok-only
+    >
+      <label>Request URL:</label>
+      <pre v-highlightjs><code class="bash">GET {{ SEARCH_ENDPOINT }}workflow/execution</code></pre>
+      <label>Search query:</label>
+      <pre v-highlightjs="JSON.stringify(searchQuery)"><code class="json"></code></pre>
+      <label>Sample command:</label>
+      <pre v-highlightjs="curlCommand"><code class="bash"></code></pre>
+    </b-modal>
+  </b-container>
+</template>
+
+<script>
+  import { mapState } from 'vuex'
+  import Loading from '@/components/Loading.vue'
+
+  export default {
+    name: "ContentModeration",
+    components: {
+      Loading
+    },
+    props: {
+      mediaType: {
+        type: String,
+        default: ""
+      },
+    },
+    data() {
+      return {
+        curlCommand: '',
+        searchQuery: '',
+        showElasticsearchApiRequest: false,
+        Confidence: 90,
+        high_confidence_data: [],
+        elasticsearch_data: [],
+        count_distinct_labels: 0,
+        count_labels: 0,
+        isBusy: false,
+        operator: 'content_moderation',
+        timeseries: new Map(),
+        selectedLabel: '',
+        lowerConfidence: false,
+        lowerConfidenceMessage: 'Try lowering confidence threshold'
+      }
+    },
+    computed: {
+      ...mapState(['player']),
+      sorted_unique_labels() {
+        // This function sorts and counts unique labels for mouse over events on label buttons
+        const es_data = this.elasticsearch_data;
+        const unique_labels = new Map();
+        // sort and count unique labels for label mouse over events
+        es_data.forEach(function (record) {
+          unique_labels.set(record.Name, unique_labels.get(record.Name) ? unique_labels.get(record.Name) + 1 : 1)
+        });
+        const sorted_unique_labels = new Map([...unique_labels.entries()].slice().sort((a, b) => b[1] - a[1]));
+        // If Elasticsearch returned undefined labels then delete them:
+        sorted_unique_labels.delete(undefined);
+        this.countLabels(sorted_unique_labels.size, es_data.length);
+        return sorted_unique_labels
+      }
+    },
+    watch: {
+      // These watches update the line chart
+      selectedLabel: function() {
+        this.chartData();
+      },
+      elasticsearch_data: function() {
+        this.chartData();
+      },
+    },
+    deactivated: function () {
+      console.log('deactivated component:', this.operator);
+      this.selectedLabel = '';
+    },
+    activated: function () {
+      console.log('activated component:', this.operator);
+      this.fetchAssetData();
+    },
+    mounted: function() {
+      this.getCurlCommand();
+    },
+    beforeDestroy: function () {
+      this.high_confidence_data = [];
+      this.elasticsearch_data = [];
+      this.count_distinct_labels = 0;
+      this.count_labels = 0;
+    },
+    methods: {
+      getCurlCommand() {
+        this.searchQuery = 'AssetId:'+this.$route.params.asset_id+' Confidence:>'+this.Confidence+' Operator:'+this.operator;
+        // get curl command to search elasticsearch
+        this.curlCommand = 'awscurl -X GET --profile default --service es --region ' + this.AWS_REGION + ' \'' + this.SEARCH_ENDPOINT + '/_search?q=' + encodeURIComponent(this.searchQuery) + '\''
+      },
+      countLabels(unique_count, total_count) {
+        this.count_distinct_labels = unique_count;
+        this.count_labels = total_count;
+      },
+      saveFile() {
+        const elasticsearch_data = this.elasticsearch_data;
+        const blob = new Blob([JSON.stringify(elasticsearch_data)], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.download = "data.json";
+        a.href = window.URL.createObjectURL(blob);
+        a.dataset.downloadurl = ['text/json', a.download, a.href].join(':');
+        const e = new MouseEvent('click', { view: window });
+        a.dispatchEvent(e);
+      },
+      updateConfidence (event) {
+        this.isBusy = !this.isBusy;
+        this.Confidence = event.target.value;
+        // TODO: move image processing to a separate component
+        if (this.mediaType === "video") {
+          // redraw markers on video timeline
+          this.player.markers.removeAll();
+        }
+        this.fetchAssetData()
+      },
+      // updateMarkers updates markers in the video player and is called when someone clicks on a label button
+      updateMarkers (label) {
+        if (this.selectedLabel === label) {
+          // keep the canvas clear canvas if user clicked the label button a second consecutive time
+          this.selectedLabel = "";
+          return
+        }
+        this.selectedLabel = label;
+        let markers = [];
+        const es_data = this.elasticsearch_data;
+        es_data.forEach(function (record) {
+          if (record.Name === label) {
+            markers.push({'time': record.Timestamp/1000, 'text': record.Name, 'overlayText': record.Name})
+          }
+        });
+        // TODO: move image processing to a separate component
+        if (this.mediaType === "video") {
+          // redraw markers on video timeline
+          this.player.markers.removeAll();
+          this.player.markers.add(markers);
+        }
+      },
+      async fetchAssetData () {
+          let query = 'AssetId:'+this.$route.params.asset_id+' Confidence:>'+this.Confidence+' Operator:'+this.operator;
+          let apiName = 'search';
+          let path = '/_search';
+          let apiParams = {
+            headers: {'Content-Type': 'application/json'},
+            queryStringParameters: {'q': query, 'default_operator': 'AND', 'size': 10000}
+          };
+          let response = await this.$Amplify.API.get(apiName, path, apiParams);
+          if (!response) {
+            this.showElasticSearchAlert = true
+          }
+          else {
+            let es_data = [];
+            let result = await response;
+            let data = result.hits.hits;
+            let dataLength = data.length;
+            if (dataLength === 0 && this.Confidence > 55)  {
+              this.lowerConfidence = true;
+              this.lowerConfidenceMessage = 'Try lowering confidence threshold'
+            }
+            else {
+              this.lowerConfidence = false;
+              for (let i = 0, len = dataLength; i < len; i++) {
+                es_data.push(data[i]._source)
+              }
+            }
+            this.elasticsearch_data = JSON.parse(JSON.stringify(es_data));
+            this.isBusy = false
+        }
+      },
+      chartData() {
+        let timeseries = new Map();
+        function saveTimestamp (millisecond) {
+          if (timeseries.has(millisecond)) {
+            timeseries.set(millisecond, {"x": millisecond, "y": timeseries.get(millisecond).y + 1})
+          } else {
+            timeseries.set(millisecond, {"x": millisecond, "y":1})
+          }
+        }
+        const es_data = this.elasticsearch_data;
+        es_data.forEach( function(record) {
+          // Define timestamp with millisecond resolution
+          const millisecond = Math.round(record.Timestamp);
+          if (this.selectedLabel) {
+            // If label is defined, then enumerate timestamps for that label
+            if (record.Name === this.selectedLabel) {
+              saveTimestamp(millisecond);
+            }
+          } else {
+            // No label has been selected, so enumerate timestamps for all label names.
+            saveTimestamp(millisecond);
+          }
+        }.bind(this));
+        //sort the timeseries map by its millisecond key
+        const ordered_timeseries = new Map([...timeseries.entries()].slice().sort((a, b) => a[0] - b[0]));
+        const chartTuples = Array.from(ordered_timeseries.values());
+        this.$store.commit('updateTimeseries', chartTuples);
+        this.$store.commit('updateSelectedLabel', this.selectedLabel);
+      },
+    }
+  }
+</script>
